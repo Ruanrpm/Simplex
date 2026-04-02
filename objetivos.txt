@@ -1,0 +1,3 @@
+Calcular o determinante por laplace
+Calcular a inversa
+Multiplicação de matrizes
