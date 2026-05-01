@@ -1,11 +1,64 @@
-import numpy as np
+from functions import inversa, laplace, mult_matriz_vetor, transposta, mult_vetor_matriz
 
 class Simplex:
     def __init__(self, A, b, c, base):
-        self.A = np.array(A, dtype=float) #Matrix completa
-        self.b = np.array(b, dtype=float) #vetor b
-        self.c = np.array(b, dtype=float) # custos
+        self.A = A #Matrix completa
+        self.b = b #vetor b
+        self.c = c # custos
         self.base = base # índices das variáveis básicas
+        
         self.n = len(c) #total de variaveis
         self.m = len(b) #numero de restricoes
 
+        # Validação da base
+        if len(self.base) != self.m:
+            raise ValueError("Base inválida: tamanho incorreto")
+
+        # *** PASSO I ***
+
+        # Montar matriz básica       
+        self.B = [[linha[j] for j in self.base] for linha in self.A]
+        if laplace(self.B) == 0:
+            raise ValueError("Matriz básica tem determinante 0. Não é invertível!")
+
+        self.B_inv = inversa(self.B)
+
+
+        # Solução básica
+        self.x_B = mult_matriz_vetor(self.B_inv, self.b)
+        self.x_N = [0] * (self.n - self.m)
+
+
+        # *** PASSO II ***
+
+        B_T = transposta(self.B)
+        self.B_T_inv = inversa(B_T)
+
+        # Custos básicos
+        cb = [self.c[j] for j in self.base]
+
+        # lambda
+        self.lambda_ = mult_matriz_vetor(self.B_T_inv, cb)
+
+
+        # *** custos relativos ***
+
+        # Custos não básicos
+        cn = [self.c[j] for j in range(self.n) if j not in self.base]
+
+        # matriz A não básica
+        self.A_N = [[linha[j] for j in range(self.n) if j not in self.base] for linha in self.A]
+
+        # lista lbdT*AN
+        lambda_T_A_N = mult_vetor_matriz(self.lambda_, self.A_N)
+
+        if len(cn) != len(lambda_T_A_N):
+            raise ValueError("Erro de dimensão nos custos reduzidos")
+        custos_reduzidos = [
+            cn[i] - lambda_T_A_N[i]
+            for i in range(len(cn))
+        ]
+
+
+        # *** derterminação da variavel a entrar na base
+        k = custos_reduzidos.index(min(custos_reduzidos))
