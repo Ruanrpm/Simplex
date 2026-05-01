@@ -25,10 +25,10 @@ class Simplex:
         if laplace(self.B) == 0:
             raise ValueError("Matriz básica tem determinante 0. Não é invertível!")
 
-        B_inv = inversa(self.B)
+        self.B_inv = inversa(self.B)
 
         # Solução básica - vetores B\N
-        self.x_B = mult_matriz_vetor(B_inv, self.b)
+        self.x_B = mult_matriz_vetor(self.B_inv, self.b)
 
         nao_base = [j for j in range(self.n) if j not in self.base]
         self.x_N = [0] * len(nao_base)
@@ -87,3 +87,21 @@ class Simplex:
     
 
     # # *** PASSO III ***
+    def teste_otimalidade(self):
+        custos_reduzidos, _ = self.calcular_custos_relativos()
+
+        for i in range(len(custos_reduzidos)):
+            if custos_reduzidos[i] < 0:
+                return "Solução na iteração atual não é ótima"
+            
+        return "Solução na iteração atual é ótima"
+    
+
+    # *** PASSO IV ***
+    def calcular_direcao(self):
+        k = self.escolher_variavel()
+
+        # pega coluna da variável entrante
+        a_k = [linha[k] for linha in self.A]
+
+        return mult_matriz_vetor(self.B_inv, a_k)
