@@ -8,10 +8,8 @@ class Simplex:
         self.base = base # índices das variáveis básicas
         
         self.n = len(c) #total de variaveis
-        self.m = len(b) #numero de restricoes
+        self.m = len(b) #numero de restricoes 
 
-
-    
 
     # *** PASSO I ***
     def calcular_solucao_basica(self):
@@ -57,13 +55,13 @@ class Simplex:
         cn = [self.c[j] for j in nao_base]
 
         # matriz A não básica
-        self.A_N = [[linha[j] for j in nao_base] for linha in self.A]
+        A_N = [[linha[j] for j in nao_base] for linha in self.A]
 
         # lista lbdT*AN
         if not hasattr(self, "lambda_"):
             raise ValueError("Execute calcular_lambda primeiro")
         
-        lambda_T_A_N = mult_vetor_matriz(self.lambda_, self.A_N)
+        lambda_T_A_N = mult_vetor_matriz(self.lambda_, A_N)
 
         if len(cn) != len(lambda_T_A_N):
             raise ValueError("Erro de dimensão nos custos reduzidos")
@@ -79,7 +77,7 @@ class Simplex:
     def escolher_variavel(self):
         custos_reduzidos, nao_base = self.calcular_custos_relativos()
 
-        # *** derterminação da variavel a entrar na base
+        # derterminação da variavel a entrar na base
         k = custos_reduzidos.index(min(custos_reduzidos))
         variavel_escolhida = nao_base[k]
 
@@ -92,16 +90,60 @@ class Simplex:
 
         for i in range(len(custos_reduzidos)):
             if custos_reduzidos[i] < 0:
-                return "Solução na iteração atual não é ótima"
+                return False
             
-        return "Solução na iteração atual é ótima"
+        return True
     
 
     # *** PASSO IV ***
-    def calcular_direcao(self):
-        k = self.escolher_variavel()
-
-        # pega coluna da variável entrante
+    def calcular_direcao(self, k):
+        # pega coluna da variável que entra
         a_k = [linha[k] for linha in self.A]
 
-        return mult_matriz_vetor(self.B_inv, a_k)
+        self.y = mult_matriz_vetor(self.B_inv, a_k)
+    
+
+    # *** PASSO V ***
+    def razao_minima(self):
+        if all(y <= 0 for y in self.y):
+            raise ValueError("O problema não tem solução ótima finita f(x) -> 'inf'")            
+            
+        # determinação da variavel a sair da base
+        valores = [
+            self.x_B[i] / self.y[i] if self.y[i] > 0 else float('inf')
+            for i in range(len(self.y))
+        ]
+        # Indice da base que sai
+        return valores.index(min(valores))
+
+    
+    # *** PASSO VI ***
+    def atualizar_base(self):
+        k = self.escolher_variavel()
+
+        self.calcular_direcao(k)
+
+        l = self.razao_minima()
+
+        self.base[l] = k
+
+
+
+    def iteracao(self):
+            # atualizar tudo que depende da base
+            self.calcular_solucao_basica()
+            self.calcular_lambda()
+
+            if self.teste_otimalidade():
+                return "Solução na iteração atual é ótima"
+
+            self.atualizar_base()
+            
+            return "continua"
+    
+    def resolver(self):
+        while True:
+            status = self.iteracao()
+
+            if status == "Solução na iteração atual é ótima":
+                return self.x_B, self.base
