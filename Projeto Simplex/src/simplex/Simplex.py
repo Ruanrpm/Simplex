@@ -1,4 +1,8 @@
-from functions import inversa, laplace, mult_matriz_vetor, transposta, mult_vetor_matriz
+from functions.inversa import inversa_matriz
+from functions.laplace import determinante_laplace
+from functions.mult_matriz_vetor import mult_matriz_vetor
+from functions.transposta import transposta
+from functions.mult_vetor_matriz import mult_vetor_matriz
 
 class Simplex:
     def __init__(self, A, b, c, base):
@@ -20,10 +24,10 @@ class Simplex:
          # Montar matriz básica       
         self.B = [[linha[j] for j in self.base] for linha in self.A]
 
-        if laplace(self.B) == 0:
+        if determinante_laplace(self.B) == 0:
             raise ValueError("Matriz básica tem determinante 0. Não é invertível!")
 
-        self.B_inv = inversa(self.B)
+        self.B_inv = inversa_matriz(self.B)
 
         # Solução básica - vetores B\N
         self.x_B = mult_matriz_vetor(self.B_inv, self.b)
@@ -38,7 +42,7 @@ class Simplex:
             raise ValueError("Execute calculo_solucao_basica() primeiro")
         
         B_T = transposta(self.B)
-        B_T_inv = inversa(B_T)
+        B_T_inv = inversa_matriz(B_T)
 
         # Custos básicos
         cb = [self.c[j] for j in self.base]
@@ -138,7 +142,7 @@ class Simplex:
                 return "Solução na iteração atual é ótima"
 
             self.atualizar_base()
-            
+
             return "continua"
     
     def resolver(self):
