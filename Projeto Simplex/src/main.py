@@ -2,11 +2,11 @@ from functions.ler_arquivo import ler_arquivo
 from simplex.Simplex import Simplex
 import random
 
-tipo, c, A, b, ops = ler_arquivo("entrada.txt")
+tipo, variaveis, c, A, b, ops = ler_arquivo("entrada.txt")
 
 base = random.sample(range(len(c)), len(b))
 
-simplex = Simplex(A, b, c, base)
+simplex = Simplex(A, b, c, base, tipo)
 
 solucao, base_final = simplex.resolver()
 
@@ -15,6 +15,7 @@ print("Base final:", base_final)
 
 print("\nTipo:", tipo)
 print("c:", c)
+print("variaveis:", variaveis)
 print("A:", A)
 print("b:", b)
 print("ops:", ops)

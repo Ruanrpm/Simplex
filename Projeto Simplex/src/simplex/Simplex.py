@@ -5,11 +5,12 @@ from functions.transposta import transposta
 from functions.mult_vetor_matriz import mult_vetor_matriz
 
 class Simplex:
-    def __init__(self, A, b, c, base):
+    def __init__(self, A, b, c, base, tipo):
         self.A = A #Matrix completa
         self.b = b #vetor b
         self.c = c # custos
         self.base = base # índices das variáveis básicas
+        self.tipo = tipo
         
         self.n = len(c) #total de variaveis
         self.m = len(b) #numero de restricoes 
@@ -25,9 +26,13 @@ class Simplex:
         self.B = [[linha[j] for j in self.base] for linha in self.A]
 
         if determinante_laplace(self.B) == 0:
-            raise ValueError("Matriz básica tem determinante 0. Não é invertível!")
-
+            raise ValueError("Matriz básica não é invertível")
+        
         self.B_inv = inversa_matriz(self.B)
+        # try:
+        #     
+        # except ValueError:
+        #     raise ValueError("Matriz básica não é invertível")
 
         # Solução básica - vetores B\N
         self.x_B = mult_matriz_vetor(self.B_inv, self.b)
@@ -71,7 +76,7 @@ class Simplex:
             raise ValueError("Erro de dimensão nos custos reduzidos")
         
         custos_reduzidos = [
-            cn[i] - lambda_T_A_N[i]
+            lambda_T_A_N[i] - cn[i]
             for i in range(len(cn))
         ]
 
@@ -82,21 +87,26 @@ class Simplex:
         custos_reduzidos, nao_base = self.calcular_custos_relativos()
 
         # derterminação da variavel a entrar na base
-        k = custos_reduzidos.index(min(custos_reduzidos))
-        variavel_escolhida = nao_base[k]
+        if self.tipo == "max":
+            # escolhe o mais negativo
+            menor_valor = min(custos_reduzidos)
+            k = custos_reduzidos.index(menor_valor)
+        else:
+            # escolhe o mais positivo
+            maior_valor = max(custos_reduzidos)
+            k = custos_reduzidos.index(maior_valor)
 
-        return variavel_escolhida
+        return nao_base[k]
     
 
     # # *** PASSO III ***
     def teste_otimalidade(self):
         custos_reduzidos, _ = self.calcular_custos_relativos()
 
-        for i in range(len(custos_reduzidos)):
-            if custos_reduzidos[i] < 0:
-                return False
-            
-        return True
+        if self.tipo == "max":
+            return all(c >= 0 for c in custos_reduzidos)
+        else:
+            return all(c <= 0 for c in custos_reduzidos)
     
 
     # *** PASSO IV ***
@@ -132,7 +142,6 @@ class Simplex:
         self.base[l] = k
 
 
-
     def iteracao(self):
             # atualizar tudo que depende da base
             self.calcular_solucao_basica()
@@ -144,10 +153,14 @@ class Simplex:
             self.atualizar_base()
 
             return "continua"
-    
+
+
     def resolver(self):
         while True:
             status = self.iteracao()
 
             if status == "Solução na iteração atual é ótima":
-                return self.x_B, self.base
+                x = [0]*self.n
+                for i, bi in enumerate(self.base):
+                    x[bi] = self.x_B[i]
+                return x, self.base
