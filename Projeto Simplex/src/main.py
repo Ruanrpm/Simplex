@@ -8,9 +8,10 @@ base = random.sample(range(len(c)), len(b))
 
 simplex = Simplex(A, b, c, base, tipo)
 
-solucao, base_final = simplex.resolver()
+solucao, base_final, z = simplex.resolver()
 
 print("Solução:", solucao)
+print("Z:", z)
 print("Base final:", base_final)
 
 print("\nTipo:", tipo)

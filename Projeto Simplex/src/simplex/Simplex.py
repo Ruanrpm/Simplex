@@ -132,9 +132,7 @@ class Simplex:
 
     
     # *** PASSO VI ***
-    def atualizar_base(self):
-        k = self.escolher_variavel()
-
+    def atualizar_base(self, k):
         self.calcular_direcao(k)
 
         l = self.razao_minima()
@@ -150,7 +148,8 @@ class Simplex:
             if self.teste_otimalidade():
                 return "Solução na iteração atual é ótima"
 
-            self.atualizar_base()
+            k = self.escolher_variavel()
+            self.atualizar_base(k)
 
             return "continua"
 
@@ -163,4 +162,5 @@ class Simplex:
                 x = [0]*self.n
                 for i, bi in enumerate(self.base):
                     x[bi] = self.x_B[i]
-                return x, self.base
+                z = sum(self.c[i] * x[i] for i in range(self.n))
+                return x, self.base, z

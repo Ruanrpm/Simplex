@@ -86,9 +86,26 @@ def ler_arquivo(entrada):
     b = []
     operadores = []
 
+    # contador das variáveis de folga/excesso
+    contador_s = 1
+
     # restrições
     for linha in linhas[1:]:
         coef, op, limite = parse_restricao(linha)
+
+        # normalização
+        if op == "<=":
+            var_s = f"s{contador_s}"
+            coef[var_s] = 1
+            op = "="
+            contador_s += 1
+
+        elif op == ">=":
+            var_s = f"s{contador_s}"
+            coef[var_s] = -1
+            op = "="
+            contador_s += 1
+
         A_dicts.append(coef)
         operadores.append(op)
         b.append(limite)
