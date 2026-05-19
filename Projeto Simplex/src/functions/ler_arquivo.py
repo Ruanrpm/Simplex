@@ -56,21 +56,25 @@ def parse_restricao(linha):
 
 
 def ordenar_variaveis(todas_vars):
-    # separa por tipo
-    xs = sorted(
-        [v for v in todas_vars if v.startswith('x')],
-        key=lambda v: int(v[1:])
-    )
 
-    ss = sorted(
-        [v for v in todas_vars if v.startswith('s')],
-        key=lambda v: int(v[1:])
-    )
+    xs = []
+    ss = []
+    outras = []
 
-    # outras variáveis (caso existam futuramente)
-    outras = sorted(
-        [v for v in todas_vars if not (v.startswith('x') or v.startswith('s'))]
-    )
+    for v in todas_vars:
+
+        if v[0] == 'x':
+            xs.append(v)
+
+        elif v[0] == 's':
+            ss.append(v)
+
+        else:
+            outras.append(v)
+
+    xs.sort()
+    ss.sort()
+    outras.sort()
 
     return xs + ss + outras
 
@@ -86,7 +90,7 @@ def ler_arquivo(entrada):
     b = []
     operadores = []
 
-    # contador das variáveis de folga/excesso
+    # contador das variáveis de folga
     contador_s = 1
 
     # restrições
@@ -110,7 +114,7 @@ def ler_arquivo(entrada):
         operadores.append(op)
         b.append(limite)
 
-    # todas variáveis
+    # todas variáveis ex: x1/x2
     todas_vars = set(c_dict.keys())
     for d in A_dicts:
         todas_vars.update(d.keys())
@@ -119,11 +123,21 @@ def ler_arquivo(entrada):
     variaveis = ordenar_variaveis(todas_vars)
 
     # vetor c
-    c = [c_dict.get(var, 0) for var in variaveis]
+    c = []
+
+    for var in variaveis:
+        c.append(c_dict.get(var, 0))
 
     # matriz A
     A = []
+
     for d in A_dicts:
-        A.append([d.get(var, 0) for var in variaveis])
+
+        linha = []
+
+        for var in variaveis:
+            linha.append(d.get(var, 0))
+
+        A.append(linha)
 
     return tipo, variaveis, c, A, b, operadores

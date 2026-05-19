@@ -9,7 +9,7 @@ class Simplex:
         self.A = A #Matrix completa
         self.b = b #vetor b
         self.c = c # custos
-        self.base = base # índices das variáveis básicas
+        self.base = base.copy() # índices das variáveis básicas
         self.tipo = tipo
         
         self.n = len(c) #total de variaveis
