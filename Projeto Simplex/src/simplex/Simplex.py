@@ -3,20 +3,51 @@ from functions.laplace import determinante_laplace
 from functions.mult_matriz_vetor import mult_matriz_vetor
 from functions.transposta import transposta
 from functions.mult_vetor_matriz import mult_vetor_matriz
+EPS = 1e-9
 
 class Simplex:
-    def __init__(self, A, b, c, base, tipo):
+    def __init__(self, A, b, c, tipo):
         self.A = A #Matrix completa
         self.b = b #vetor b
         self.c = c # custos
-        self.base = base.copy() # índices das variáveis básicas
         self.tipo = tipo
+        self.base = []
         
         self.n = len(c) #total de variaveis
         self.m = len(b) #numero de restricoes 
 
+        self.encontrar_base_inicial()
+
 
     # *** PASSO I ***
+    def encontrar_base_inicial(self):
+        base = []
+
+        for j in range(self.n):
+            coluna = [self.A[i][j] for i in range(self.m)]
+
+            pos_um = []
+
+            for i, valor in enumerate(coluna):
+
+                if abs(valor - 1) < EPS:
+                    pos_um.append(i)
+
+                elif abs(valor) > EPS:
+                    break
+
+            else:
+                if len(pos_um) == 1:
+                    base.append(j)
+
+        if len(base) != self.m:
+            raise ValueError(
+                "Nenhuma base identidade encontrada."
+            )
+
+        self.base = base
+
+
     def calcular_solucao_basica(self):
         # Validação da base
         if len(self.base) != self.m:
@@ -29,12 +60,6 @@ class Simplex:
             raise ValueError("Matriz básica não é invertível")
         
         self.B_inv = inversa_matriz(self.B)
-        # try:
-        #     
-        # except ValueError:
-        #     raise ValueError("Matriz básica não é invertível")
-
-        # Solução básica - vetores B\N
         self.x_B = mult_matriz_vetor(self.B_inv, self.b)
 
         nao_base = [j for j in range(self.n) if j not in self.base]
@@ -104,9 +129,9 @@ class Simplex:
         custos_reduzidos, _ = self.calcular_custos_relativos()
 
         if self.tipo == "max":
-            return all(c >= 0 for c in custos_reduzidos)
+            return all(c >= -EPS for c in custos_reduzidos)
         else:
-            return all(c <= 0 for c in custos_reduzidos)
+            return all(c <= EPS for c in custos_reduzidos)
     
 
     # *** PASSO IV ***
@@ -119,7 +144,7 @@ class Simplex:
 
     # *** PASSO V ***
     def razao_minima(self):
-        if all(y <= 0 for y in self.y):
+        if all(y <= EPS for y in self.y):
             raise ValueError("O problema não tem solução ótima finita f(x) -> 'inf'")            
             
         # determinação da variavel a sair da base

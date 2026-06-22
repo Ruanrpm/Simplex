@@ -4,9 +4,7 @@ import random
 
 tipo, variaveis, c, A, b, ops = ler_arquivo("entrada.txt")
 
-base = random.sample(range(len(c)), len(b))
-
-simplex = Simplex(A, b, c, base, tipo)
+simplex = Simplex(A, b, c, tipo)
 
 solucao, base_final, z = simplex.resolver()
 
