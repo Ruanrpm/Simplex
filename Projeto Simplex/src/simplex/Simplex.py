@@ -6,8 +6,9 @@ from functions.mult_vetor_matriz import mult_vetor_matriz
 EPS = 1e-9
 
 class Simplex:
-    def __init__(self, A, b, c, tipo):
+    def __init__(self, A, b, c, tipo, ops):
         self.A = A #Matrix completa
+        self.operadores = ops
         self.b = b #vetor b
         self.c = c # custos
         self.tipo = tipo
@@ -15,8 +16,6 @@ class Simplex:
         
         self.n = len(c) #total de variaveis
         self.m = len(b) #numero de restricoes 
-
-        self.encontrar_base_inicial()
 
 
     # *** PASSO I ***
@@ -42,7 +41,7 @@ class Simplex:
 
         if len(base) != self.m:
             raise ValueError(
-                "Nenhuma base identidade encontrada."
+                "Nenhuma base identidade encontrada"
             )
 
         self.base = base
@@ -145,7 +144,7 @@ class Simplex:
     # *** PASSO V ***
     def razao_minima(self):
         if all(y <= EPS for y in self.y):
-            raise ValueError("O problema não tem solução ótima finita f(x) -> 'inf'")            
+            return None # Problema ilimitado
             
         # determinação da variavel a sair da base
         valores = [
@@ -161,6 +160,8 @@ class Simplex:
         self.calcular_direcao(k)
 
         l = self.razao_minima()
+        if l is None:
+            return "ILIMITADO"
 
         self.base[l] = k
 
@@ -174,7 +175,10 @@ class Simplex:
                 return "Solução na iteração atual é ótima"
 
             k = self.escolher_variavel()
-            self.atualizar_base(k)
+
+            status = self.atualizar_base(k)
+            if status == "ILIMITADO":
+                return "ILIMITADO"
 
             return "continua"
 
@@ -189,3 +193,119 @@ class Simplex:
                     x[bi] = self.x_B[i]
                 z = sum(self.c[i] * x[i] for i in range(self.n))
                 return x, self.base, z
+            if status == "ILIMITADO":
+                x = [0]*self.n
+                return "ILIMITADO", self.base, 0.0
+            
+
+
+#==================
+# IMPLEMENTAÇÃO INICIAL DA FAZE I
+#==================    
+    def preprocessar(self):
+        """
+        Normaliza o problema para forma padrão do simplex.
+        """
+
+        #  MAX -> MIN
+        if self.tipo == "max":
+            self.c = [-ci for ci in self.c]
+            self.tipo = "min"
+
+        #  Garantir b_i >= 0
+        for i in range(len(self.b)):
+            if self.b[i] < 0:
+                self.b[i] *= -1
+                # multiplica linha inteira por -1
+                self.A[i] = [-aij for aij in self.A[i]]
+
+        # self.encontrar_base_inicial()
+    
+    def construir_fase1(self):
+        """
+        Constrói o problema auxiliar da Fase I.
+        """
+        A = self.A
+        b = self.b 
+        operadores = self.operadores
+
+        m = len(A)
+        n = len(A[0])
+
+        self.A_fase1 = []
+        self.base = []
+        self.nbase = list(range(n))
+        self.artificial_mask = []
+
+        indice_artificial = n
+
+        # calculo do número de variaveis artificiais
+        num_artificiais = 0
+        for op in operadores:
+            if op in [">=", "="]:
+               num_artificiais += 1
+            
+
+        # Controi a matriz da fase I & monta base inicial
+        for i in range(m):
+            linha = A[i].copy()
+
+            # por padrão indica que a restrição atual não possui artificial
+            self.artificial_mask.append(False)
+
+            # Todas a linhas recebem espaço para as artificiais
+            linha.extend([0] * num_artificiais)
+
+            # caso precise de artificial:
+            if operadores[i] in [">=", "="]:
+                pos = indice_artificial
+
+                linha[pos] = 1  
+
+                self.base.append(pos)
+                self.artificial_mask[i] = True
+
+                indice_artificial += 1
+
+            else:
+                # coloca as variaveis de folga na base
+                
+                # self.A_fase1 + [linha] : Cria uma matriz temporária, como se a linha atual já tivesse sido adicionada.
+                var_folga = self.encontrar_coluna_base(self.A_fase1 + [linha], i)
+                self.base.append(var_folga)
+
+            self.A_fase1.append(linha)
+
+        # vetor c da fase I (min soma das artificiais)
+        total_vars = len(self.A_fase1[0])
+        self.c_fase1 = [0] * total_vars
+
+        for i in range(m):
+            if self.artificial_mask[i]:
+                # soma quantas variaveis artificiais apareceram antes da linha i
+                self.c_fase1[n + sum(self.artificial_mask[:i])] = 1
+
+    # Usado para encontrar a coluna identidade da restrição
+    def encontrar_coluna_base(self, A, linha):
+        # Procura uma coluna que seja idenidade
+        for j in range(len(A[0])):
+
+            if A[linha][j] != 1:
+                continue
+
+            identidade = True
+
+            # percorre todas as inhas da matriz
+            for i in range(len(A)):
+
+                esperado = 1 if i == linha else 0
+
+                # Ve se tem valor esperado
+                if A[i][j] != esperado:
+                    identidade = False
+                    break
+
+            if identidade:
+                return j
+
+        return None

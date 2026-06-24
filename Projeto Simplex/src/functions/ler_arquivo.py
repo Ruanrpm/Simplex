@@ -92,11 +92,12 @@ def ler_arquivo(entrada):
 
     # contador das variáveis de folga
     contador_s = 1
+    operadores = []
 
     # restrições
     for linha in linhas[1:]:
         coef, op, limite = parse_restricao(linha)
-
+        operadores.append(op)
         # normalização
         if op == "<=":
             var_s = f"s{contador_s}"
@@ -111,7 +112,6 @@ def ler_arquivo(entrada):
             contador_s += 1
 
         A_dicts.append(coef)
-        operadores.append(op)
         b.append(limite)
 
     # todas variáveis ex: x1/x2
