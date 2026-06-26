@@ -235,7 +235,7 @@ class Simplex:
         self.A_fase1 = []
         self.base = []
         self.nbase = list(range(n))
-        self.artificial_mask = []
+        self.artificiais_add = []
 
         indice_artificial = n
 
@@ -250,10 +250,6 @@ class Simplex:
         if num_artificiais > 1:
             casoA = True
             num_artificiais = m
-
-        for op in operadores:
-            if op in [">=", "="]:
-               num_artificiais += 1
             
 
         # Controi a matriz da fase I & monta base inicial
@@ -261,7 +257,7 @@ class Simplex:
             linha = A[i].copy()
 
             # por padrão indica que a restrição atual não possui artificial
-            self.artificial_mask.append(False)
+            self.artificiais_add.append(False)
 
             # Todas a linhas recebem espaço para as artificiais
             linha.extend([0] * num_artificiais)
@@ -273,20 +269,20 @@ class Simplex:
                 linha[pos] = 1  
 
                 self.base.append(pos)
-                self.artificial_mask[i] = True
+                self.artificiais_add[i] = True
 
                 indice_artificial += 1
 
             else:
-                # coloca as variaveis de folga na base
+                # coloca as variaveis de folga na base, caso não precise de artificial
                 
-                # self.A_fase1 + [linha] : Cria uma matriz temporária, como se a linha atual já tivesse sido adicionada.
-                var_folga = self.encontrar_coluna_base(self.A_fase1 + [linha], i)
+                # Cria uma matriz temporária, como se a linha atual já tivesse sido adicionada.
+                var_folga = self.encontrar_coluna_base(self.A_fase1, i)
                 self.base.append(var_folga)
 
             self.A_fase1.append(linha)
 
-        # vetor c da fase I (min soma das artificiais)
+        # vetor c da fase I
         total_vars = len(self.A_fase1[0])
         self.c_fase1 = [0] * total_vars
 
@@ -297,8 +293,8 @@ class Simplex:
         else:
             # coloca artificiais apenas nas != <=
             for i in range(m):
-                if self.artificial_mask[i]:
-                    self.c_fase1[n + sum(self.artificial_mask[:i])] = 1
+                if self.artificiais_add[i]:
+                    self.c_fase1[n + sum(self.artificiais_add[:i])] = 1
 
     # Usado para encontrar a coluna identidade da restrição
     def encontrar_coluna_base(self, A, linha):
