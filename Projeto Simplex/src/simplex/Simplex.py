@@ -253,7 +253,7 @@ class Simplex:
             else:
                 # coloca as variaveis de folga na base, caso não precise de artificial
                 
-                # Cria uma matriz temporária, como se a linha atual já tivesse sido adicionada.
+                # Pega o indice da coluna identidade
                 var_folga = self.encontrar_coluna_base(self.A, i)
                 if var_folga is None:
                     return "INFACTIVEL"
@@ -273,7 +273,11 @@ class Simplex:
             # coloca artificiais apenas nas != <=
             for i in range(m):
                 if self.artificiais_add[i]:
-                    self.c_fase1[n + sum(self.artificiais_add[:i])] = 1
+                    posicao = n
+                    for j in range(i):
+                        posicao += self.artificiais_add[j]
+
+                    self.c_fase1[posicao] = 1
 
     # Usado para encontrar a coluna identidade da restrição
     def encontrar_coluna_base(self, A, linha):
@@ -333,7 +337,7 @@ class Simplex:
 
                     self.primeira_artificial = self.n
 
-                    # Pega o valor e o indice do vetor b
+                    # Pega o valor e o indice do vetor
                     for i, coluna in enumerate(self.base):
 
                         if coluna >= self.primeira_artificial and self.x_B[i] > EPS:
@@ -362,11 +366,6 @@ class Simplex:
                 return x, self.base, z
 
             if status == "ILIMITADO":
-
-                _, _, n = self.dados_problema()
-
-                x = [0] * n
-
                 return "ILIMITADO", self.base, 0.0
 
     def remover_artificiais_base(self):
