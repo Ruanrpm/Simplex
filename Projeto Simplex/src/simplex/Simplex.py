@@ -219,7 +219,7 @@ class Simplex:
                 # multiplica linha inteira por -1
                 self.A[i] = [-aij for aij in self.A[i]]
 
-        # self.encontrar_base_inicial()
+        self.encontrar_base_inicial()
     
     def construir_fase1(self):
         """
@@ -239,8 +239,18 @@ class Simplex:
 
         indice_artificial = n
 
-        # calculo do número de variaveis artificiais
+        # calculo do número de restrições >= ou =
         num_artificiais = 0
+        for op in operadores:
+            if op in [">=", "="]:
+                num_artificiais += 1
+
+        # verifica qual caso será utilizado
+        casoA = False
+        if num_artificiais > 1:
+            casoA = True
+            num_artificiais = m
+
         for op in operadores:
             if op in [">=", "="]:
                num_artificiais += 1
@@ -257,7 +267,7 @@ class Simplex:
             linha.extend([0] * num_artificiais)
 
             # caso precise de artificial:
-            if operadores[i] in [">=", "="]:
+            if casoA or operadores[i] in [">=", "="]:
                 pos = indice_artificial
 
                 linha[pos] = 1  
@@ -280,10 +290,15 @@ class Simplex:
         total_vars = len(self.A_fase1[0])
         self.c_fase1 = [0] * total_vars
 
-        for i in range(m):
-            if self.artificial_mask[i]:
-                # soma quantas variaveis artificiais apareceram antes da linha i
-                self.c_fase1[n + sum(self.artificial_mask[:i])] = 1
+        if casoA:
+            # Coloca artificiais em todas as retrições
+            for i in range(m):
+                self.c_fase1[n + i] = 1
+        else:
+            # coloca artificiais apenas nas != <=
+            for i in range(m):
+                if self.artificial_mask[i]:
+                    self.c_fase1[n + sum(self.artificial_mask[:i])] = 1
 
     # Usado para encontrar a coluna identidade da restrição
     def encontrar_coluna_base(self, A, linha):
@@ -295,10 +310,12 @@ class Simplex:
 
             identidade = True
 
-            # percorre todas as inhas da matriz
+            # percorre todas as linhas da matriz
             for i in range(len(A)):
-
-                esperado = 1 if i == linha else 0
+                if i == linha:
+                    esperado = 1 
+                else:
+                    esperado = 0
 
                 # Ve se tem valor esperado
                 if A[i][j] != esperado:
