@@ -79,6 +79,26 @@ def ordenar_variaveis(todas_vars):
     return xs + ss + outras
 
 
+def eh_restricao_nao_negatividade(linha):
+    linha = linha.lower().replace(" ", "")
+
+    if ">=" not in linha:
+        return False
+
+    esquerda, direita = linha.split(">=")
+
+    if direita != "0":
+        return False
+
+    # Linha como "x1, x2 >= 0" so declara nao-negatividade.
+    # Como o simplex ja assume isso, nao entra na matriz A.
+    for var in esquerda.split(","):
+        if not var.startswith("x"):
+            return False
+
+    return True
+
+
 def ler_arquivo(entrada):
     with open(entrada, 'r') as f:
         linhas = [linha.strip() for linha in f if linha.strip()]
@@ -96,6 +116,9 @@ def ler_arquivo(entrada):
 
     # restrições
     for linha in linhas[1:]:
+        if eh_restricao_nao_negatividade(linha):
+            continue
+
         coef, op, limite = parse_restricao(linha)
         operadores.append(op)
         # normalização

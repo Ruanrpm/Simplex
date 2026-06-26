@@ -13,47 +13,26 @@ class Simplex:
         self.c = c # custos
         self.tipo = tipo
         self.base = []
+        self.fase = 2
         
         self.n = len(c) #total de variaveis
         self.m = len(b) #numero de restricoes 
 
 
     # *** PASSO I ***
-    def encontrar_base_inicial(self):
-        base = []
-
-        for j in range(self.n):
-            coluna = [self.A[i][j] for i in range(self.m)]
-
-            pos_um = []
-
-            for i, valor in enumerate(coluna):
-
-                if abs(valor - 1) < EPS:
-                    pos_um.append(i)
-
-                elif abs(valor) > EPS:
-                    break
-
-            else:
-                if len(pos_um) == 1:
-                    base.append(j)
-
-        if len(base) != self.m:
-            raise ValueError(
-                "Nenhuma base identidade encontrada"
-            )
-
-        self.base = base
-
 
     def calcular_solucao_basica(self):
+        self.garantir_base_inicial()
+
         # Validação da base
         if len(self.base) != self.m:
             raise ValueError("Base inválida: tamanho incorreto!")
         
          # Montar matriz básica       
-        self.B = [[linha[j] for j in self.base] for linha in self.A]
+        
+        A, _, _ = self.dados_problema()
+
+        self.B = [[linha[j] for j in self.base] for linha in A]
 
         if determinante_laplace(self.B) == 0:
             raise ValueError("Matriz básica não é invertível")
@@ -61,7 +40,8 @@ class Simplex:
         self.B_inv = inversa_matriz(self.B)
         self.x_B = mult_matriz_vetor(self.B_inv, self.b)
 
-        nao_base = [j for j in range(self.n) if j not in self.base]
+        _, _, n = self.dados_problema()
+        nao_base = [j for j in range(n) if j not in self.base]
         self.x_N = [0] * len(nao_base)
 
 
@@ -74,7 +54,9 @@ class Simplex:
         B_T_inv = inversa_matriz(B_T)
 
         # Custos básicos
-        cb = [self.c[j] for j in self.base]
+        _, c, _ = self.dados_problema()
+
+        cb = [c[j] for j in self.base]
 
         # lambda
         self.lambda_ = mult_matriz_vetor(B_T_inv, cb)
@@ -84,11 +66,12 @@ class Simplex:
         # *** custos relativos ***
         
         # Custos não básicos
-        nao_base = [j for j in range(self.n) if j not in self.base]
-        cn = [self.c[j] for j in nao_base]
+        A, c, n = self.dados_problema()
+        nao_base = [j for j in range(n) if j not in self.base]
+        cn = [c[j] for j in nao_base]
 
         # matriz A não básica
-        A_N = [[linha[j] for j in nao_base] for linha in self.A]
+        A_N = [[linha[j] for j in nao_base] for linha in A]
 
         # lista lbdT*AN
         if not hasattr(self, "lambda_"):
@@ -135,8 +118,10 @@ class Simplex:
 
     # *** PASSO IV ***
     def calcular_direcao(self, k):
+        A, _, _ = self.dados_problema()
+
         # pega coluna da variável que entra
-        a_k = [linha[k] for linha in self.A]
+        a_k = [linha[k] for linha in A]
 
         self.y = mult_matriz_vetor(self.B_inv, a_k)
     
@@ -181,27 +166,13 @@ class Simplex:
                 return "ILIMITADO"
 
             return "continua"
-
-
-    def resolver(self):
-        while True:
-            status = self.iteracao()
-
-            if status == "Solução na iteração atual é ótima":
-                x = [0]*self.n
-                for i, bi in enumerate(self.base):
-                    x[bi] = self.x_B[i]
-                z = sum(self.c[i] * x[i] for i in range(self.n))
-                return x, self.base, z
-            if status == "ILIMITADO":
-                x = [0]*self.n
-                return "ILIMITADO", self.base, 0.0
-            
+         
 
 
 #==================
 # IMPLEMENTAÇÃO INICIAL DA FAZE I
 #==================    
+
     def preprocessar(self):
         """
         Normaliza o problema para forma padrão do simplex.
@@ -219,12 +190,18 @@ class Simplex:
                 # multiplica linha inteira por -1
                 self.A[i] = [-aij for aij in self.A[i]]
 
-        self.encontrar_base_inicial()
+                # Quando multiplica por -1, o sinal da restricao tambem vira.
+                if self.operadores[i] == "<=":
+                    self.operadores[i] = ">="
+                elif self.operadores[i] == ">=":
+                    self.operadores[i] = "<="
     
     def construir_fase1(self):
         """
         Constrói o problema auxiliar da Fase I.
         """
+        self.fase = 1
+
         A = self.A
         b = self.b 
         operadores = self.operadores
@@ -277,7 +254,9 @@ class Simplex:
                 # coloca as variaveis de folga na base, caso não precise de artificial
                 
                 # Cria uma matriz temporária, como se a linha atual já tivesse sido adicionada.
-                var_folga = self.encontrar_coluna_base(self.A_fase1, i)
+                var_folga = self.encontrar_coluna_base(self.A, i)
+                if var_folga is None:
+                    return "INFACTIVEL"
                 self.base.append(var_folga)
 
             self.A_fase1.append(linha)
@@ -322,3 +301,117 @@ class Simplex:
                 return j
 
         return None
+
+    def garantir_base_inicial(self):
+        if self.base or self.fase == 1:
+            return
+
+        for i in range(self.m):
+            var_folga = self.encontrar_coluna_base(self.A, i)
+            if var_folga is None:
+                raise ValueError("Base inicial nao encontrada. Use Fase I.")
+            self.base.append(var_folga)
+    
+    # Para não ter que verificar a todo momento se é fase I ou II
+    def dados_problema(self):
+        # Retorna a matriz A, vetor de custos c e número de variáveis da fase atual.
+
+        if self.fase == 1:
+            return self.A_fase1, self.c_fase1, len(self.A_fase1[0])
+        else:
+            return self.A, self.c, self.n
+
+    def resolver(self):
+        while True:
+
+            status = self.iteracao()
+
+            if status == "Solução na iteração atual é ótima":
+
+                # Se estiver na Fase I
+                if self.fase == 1:
+
+                    self.primeira_artificial = self.n
+
+                    # Pega o valor e o indice do vetor b
+                    for i, coluna in enumerate(self.base):
+
+                        if coluna >= self.primeira_artificial and self.x_B[i] > EPS:
+                            return "INFACTIVEL", self.base, None
+
+                    self.remover_artificiais_base()
+                    # Se fase I OK, então
+                    self.fase = 2
+
+                    # RESET COMPLETO DO ESTADO PARA FASE II
+                    self.calcular_solucao_basica()
+                    self.calcular_lambda()
+                    continue
+
+
+                # Fase II 
+                _, c, n = self.dados_problema()
+
+                x = [0] * n
+                # Coloca o valor da variavel basica no vetor de solução
+                for i, b_i in enumerate(self.base):
+                    x[b_i] = self.x_B[i]
+
+                z = sum(c[i] * x[i] for i in range(n))
+
+                return x, self.base, z
+
+            if status == "ILIMITADO":
+
+                _, _, n = self.dados_problema()
+
+                x = [0] * n
+
+                return "ILIMITADO", self.base, 0.0
+
+    def remover_artificiais_base(self):
+
+        for i, coluna_base in enumerate(self.base):
+            if abs(self.x_B[i]) > EPS:
+                continue
+
+            if coluna_base < self.primeira_artificial:
+                continue
+
+            encontrou = False
+
+            for j in range(self.primeira_artificial):
+
+                if j in self.base:
+                    continue
+
+                if abs(self.A_fase1[i][j]) > EPS:
+
+                    self.base[i] = j
+                    encontrou = True
+                    break
+
+            
+            if not encontrou:
+                # Remove a linha da matriz
+                self.A_fase1.pop(i)
+
+                # Remove o termo independente correspondente
+                self.b.pop(i)
+
+                # Remove a variável da base
+                self.base.pop(i)
+
+                # Atualiza o número de restrições
+                self.m -= 1
+
+                print(f"Restrição {i} removida por redundância.")
+
+                break
+
+    def precisa_fase1(self):
+        for op in self.operadores:
+            if op == ">=" or op == ">" or op == "=":
+                return True
+
+        return False

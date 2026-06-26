@@ -2,39 +2,45 @@ from functions.ler_arquivo import ler_arquivo
 from simplex.Simplex import Simplex
 
 tipo, variaveis, c, A, b, ops = ler_arquivo("entrada.txt")
-tipo_original = tipo
-
 simplex = Simplex(A, b, c, tipo, ops)
-# simplex.preprocessar()
-simplex.construir_fase1()
 
-# solucao, base_final, z = simplex.resolver()
-# print("operadores originais:", ops)
+simplex.preprocessar()
 
+try:
+    if simplex.precisa_fase1():
+        status_fase1 = simplex.construir_fase1()
 
-# if tipo_original == "max" and z != 0:
-#     z = -z
+        if status_fase1 == "INFACTIVEL":
+            print("Problema infactivel")
+            exit()
 
-# print("Solução:", solucao)
-# print("Z:", z)
-# print("Base final:", base_final)
+    solucao, base_final, z = simplex.resolver()
 
-# print("\nTipo:", tipo_original)
-# print("variaveis:", variaveis)
-# print("c:", simplex.c)
-# print("A:", simplex.A)
-# print("b:", simplex.b)
-# print("ops:", ops)
+except ValueError as erro:
+    # Se o simplex percebeu inviabilidade em algum ponto, mostramos mensagem simples.
+    if str(erro) == "INFACTIVEL":
+        print("Problema infactivel")
+        exit()
 
+    raise erro
 
+if solucao == "INFACTIVEL":
+    print("Problema infactivel")
+    exit()
 
+# ajuste se for max original
+if tipo == "max" and z is not None:
+    z = -z
 
+if z == -0.0:
+    z = 0.0
 
-print("A_fase1:")
-for linha in simplex.A_fase1:
-    print(linha)
+print("\nSolucao:", solucao)
+print("Z:", z)
+print("Base final:", base_final)
 
-print("\nbase:", simplex.base)
-print("nbase:", simplex.nbase)
-print("artificial_mask:", simplex.artificiais_add)
-print("c_fase1:", simplex.c_fase1)
+print("\nvariaveis:", variaveis)
+print("c:", simplex.c)
+print("A:", simplex.A)
+print("b:", simplex.b)
+print("ops:", ops)
