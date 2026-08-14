@@ -96,25 +96,6 @@ python src/main.py
 
 O script `main.py` lê `entrada.txt`, resolve o problema e imprime o resultado no terminal.
 
-## Build
-
-Não há processo de build para este projeto; trata-se de um script Python executável diretamente.
-
-## Testes
-
-Não existem testes automatizados no repositório.
-
-## API / Backend
-
-Não há backend, API ou serviço web implementado neste projeto.
-
-## Banco de dados
-
-Não há banco de dados ou persistência externa utilizada.
-
-## Autenticação
-
-Não há autenticação implementada.
 
 ## Desenvolvimento
 
